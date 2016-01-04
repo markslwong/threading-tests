@@ -10,6 +10,9 @@ namespace ThreadingTests
     {
         static void Main(string[] args)
         {
+            if (MemoryProfiler.CanControlAllocations)
+                MemoryProfiler.EnableAllocations();
+
             Task task1 = SemaphoreGCTricklePressure();
             task1.Wait();
 
@@ -36,13 +39,8 @@ namespace ThreadingTests
             DateTime endTime = DateTime.Now.AddMinutes(MinutesToRun);
 
             if (MemoryProfiler.IsActive)
-            {
-                if (MemoryProfiler.CanControlAllocations)
-                    MemoryProfiler.EnableAllocations();
-
                 MemoryProfiler.Dump();
-            }
-
+            
             while (true)
             {
                 tokenSource = new CancellationTokenSource();
@@ -80,13 +78,8 @@ namespace ThreadingTests
             SemaphoreSlim semaphore;
 
             if (MemoryProfiler.IsActive)
-            {
-                if (MemoryProfiler.CanControlAllocations)
-                    MemoryProfiler.EnableAllocations();
-
                 MemoryProfiler.Dump();
-            }
-
+            
             for (int i = 0; i < NumberOfAllocations; ++i)
             {
                 tokenSource = new CancellationTokenSource();
@@ -115,13 +108,8 @@ namespace ThreadingTests
             SemaphoreSlim semaphore;
 
             if (MemoryProfiler.IsActive)
-            {
-                if (MemoryProfiler.CanControlAllocations)
-                    MemoryProfiler.EnableAllocations();
-
                 MemoryProfiler.Dump();
-            }
-
+            
             for (int i = 0; i < NumberOfAllocations; ++i)
             {
                 tokenSource = new CancellationTokenSource();
