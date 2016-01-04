@@ -10,11 +10,18 @@ namespace ThreadingTests
     {
         static void Main(string[] args)
         {
-            Task task = TestAllocations();
-            task.Wait();
+            Task task1 = SemaphoreGCTricklePressure();
+            task1.Wait();
+
+            Task task2 = SemaphoreGCExtremePressure();
+            task2.Wait();
+
+            SemaphoreGCExtremePressureBlocking();
+
+            Console.ReadLine();
         }
 
-        private static async Task TestAllocations()
+        private static async Task SemaphoreGCTricklePressure()
         {
             const int AllocationsPerSecond = 1000;
             const int MinutesToRun = 10;
@@ -61,7 +68,76 @@ namespace ThreadingTests
 
             Console.WriteLine("Allocated {0} number of Semaphores and CancellationTokenSources", allocated);
             Console.WriteLine("Excuted for {0} minutes", MinutesToRun);
-            Console.ReadLine();
+        }
+
+        private static async Task SemaphoreGCExtremePressure()
+        {
+            const int NumberOfAllocations = 50000000;
+
+            // Variable declarations outside of block scope in case there are compiler optimizations
+            // that will dispose these variables when leaving block scope.
+            CancellationTokenSource tokenSource;
+            SemaphoreSlim semaphore;
+
+            if (MemoryProfiler.IsActive)
+            {
+                if (MemoryProfiler.CanControlAllocations)
+                    MemoryProfiler.EnableAllocations();
+
+                MemoryProfiler.Dump();
+            }
+
+            for (int i = 0; i < NumberOfAllocations; ++i)
+            {
+                tokenSource = new CancellationTokenSource();
+                semaphore = new SemaphoreSlim(1);
+
+                await semaphore.WaitAsync(tokenSource.Token);
+                semaphore.Release();
+
+                if (i % 10000 == 0)
+                    Console.WriteLine(i);
+            }
+
+            if (MemoryProfiler.IsActive)
+                MemoryProfiler.Dump();
+
+            Console.WriteLine("Allocated {0} number of Semaphores and CancellationTokenSources", NumberOfAllocations);
+        }
+
+        private static void SemaphoreGCExtremePressureBlocking()
+        {
+            const int NumberOfAllocations = 50000000;
+            
+            // Variable declarations outside of block scope in case there are compiler optimizations
+            // that will dispose these variables when leaving block scope.
+            CancellationTokenSource tokenSource;
+            SemaphoreSlim semaphore;
+
+            if (MemoryProfiler.IsActive)
+            {
+                if (MemoryProfiler.CanControlAllocations)
+                    MemoryProfiler.EnableAllocations();
+
+                MemoryProfiler.Dump();
+            }
+
+            for (int i = 0; i < NumberOfAllocations; ++i)
+            {
+                tokenSource = new CancellationTokenSource();
+                semaphore = new SemaphoreSlim(1);
+
+                semaphore.Wait(tokenSource.Token);
+                semaphore.Release();
+
+                if (i % 10000 == 0)
+                    Console.WriteLine(i);
+            }
+
+            if (MemoryProfiler.IsActive)
+                MemoryProfiler.Dump();
+
+            Console.WriteLine("Allocated {0} number of Semaphores and CancellationTokenSources", NumberOfAllocations);
         }
     }
 }
