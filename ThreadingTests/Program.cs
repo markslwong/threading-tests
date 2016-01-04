@@ -1,23 +1,41 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Profiler.Windows.Api;
+
 
 namespace ThreadingTests
 {
     class Program
     {
-        static async void Main(string[] args)
+        static void Main(string[] args)
         {
-            const int AllocationsPerSecond = 50;
-            const int MinutesToRun = 5;
+            Task task = TestAllocations();
+            task.Wait();
+        }
 
-            int seconds = 0;
+        private static async Task TestAllocations()
+        {
+            const int AllocationsPerSecond = 1000;
+            const int MinutesToRun = 10;
+
             long allocated = 0;
-            
+
             // Variable declarations outside of block scope in case there are compiler optimizations
             // that will dispose these variables when leaving block scope.
             CancellationTokenSource tokenSource;
             SemaphoreSlim semaphore;
-            
+
+            DateTime endTime = DateTime.Now.AddMinutes(MinutesToRun);
+
+            if (MemoryProfiler.IsActive)
+            {
+                if (MemoryProfiler.CanControlAllocations)
+                    MemoryProfiler.EnableAllocations();
+
+                MemoryProfiler.Dump();
+            }
+
             while (true)
             {
                 tokenSource = new CancellationTokenSource();
@@ -32,8 +50,18 @@ namespace ThreadingTests
                 // Do not Dispose CancellationTokenSource or Semaphore.  Let this leak and see how many
                 // sempaphores are required to make this crash.
 
-                seconds
+                allocated++;
+
+                if (endTime < DateTime.Now)
+                    break;
             }
+
+            if (MemoryProfiler.IsActive)
+                MemoryProfiler.Dump();
+
+            Console.WriteLine("Allocated {0} number of Semaphores and CancellationTokenSources", allocated);
+            Console.WriteLine("Excuted for {0} minutes", MinutesToRun);
+            Console.ReadLine();
         }
     }
 }
